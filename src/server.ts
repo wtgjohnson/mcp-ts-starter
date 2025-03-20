@@ -46,7 +46,7 @@ export function createServer() {
     () => ({
       messages: [
         {
-          role: "assistant", // Changed from "system" to "assistant"
+          role: "assistant", 
           content: {
             type: "text",
             text: "You are a helpful assistant.",
