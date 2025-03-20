@@ -134,7 +134,7 @@ export function createServer() {
         // Format the results
         const results = data.data?.search?.results?.results || [];
         const formattedResults = results
-          .map((result) => {
+          .map((result: { repository: { name: any; }; file: { path: any; }; lineMatches: any[]; }) => {
             if (result.repository && result.file) {
               return (
                 `Repo: ${result.repository.name}, File: ${result.file.path}\n` +
@@ -161,7 +161,7 @@ export function createServer() {
           content: [
             {
               type: "text",
-              text: `Error performing search: ${error.message}`,
+              text: `Error performing search: ${Response.error}`,
             },
           ],
         };
