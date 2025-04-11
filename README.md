@@ -1,95 +1,147 @@
 # Hello World MCP Server
 
-A simple TypeScript implementation of a Model Context Protocol (MCP) server with resources, prompts, and tools. This starter project demonstrates MCP fundamentals and serves as a template for building more complex MCP servers.
+A simple Model Context Protocol (MCP) server implementation built with TypeScript. This server demonstrates basic MCP functionality including resources, prompts, and tools.
 
 ## Features
 
-- **Static Resource**: Provides a "Hello, World" message when called via `hello://world`
-- **Dynamic Resource**: Customizable greeting that accepts a name parameter via `greeting://{name}`
-- **Prompt**: Simple prompt that configures an assistant with "You are a helpful assistant"
-- **Tool**: Echo tool that returns "Hello" plus your input message
-- **Multiple Transport Options**: Run as either a stdio server or HTTP server with Server-Sent Events (SSE)
+- SSE and STDIO transport support
+- Resource handling with static and dynamic resources
+- Sample prompt implementation
+- Example tool that echoes messages
+- Debug tool for server introspection
 
-## Installation
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+
+### Installation
 
 ```bash
 npm install
 ```
 
-## Build
+### Build
 
 ```bash
 npm run build
 ```
 
-## Clean
+## Running the Server
 
-```bash
-npm run clean
-```
-
-## Run
-
-### Using STDIO (for integration with Claude Desktop)
-
-```bash
-npm run start
-```
-
-### Using HTTP with SSE (for web clients)
+### HTTP/SSE Transport (Web Browsers)
 
 ```bash
 npm run start:http
 ```
 
-By default, the HTTP server runs on port 3000. You can change this by setting the `PORT` environment variable.
+This starts the server on http://localhost:3000 with:
+- SSE endpoint at `/sse`
+- Message endpoint at `/messages`
 
-## Project Structure
+### STDIO Transport (Command Line)
 
-```
-.
-├── scripts/        # Helper scripts
-├── src/            # Source code
-│   ├── http.ts     # HTTP transport implementation
-│   ├── index.ts    # Main entry point 
-│   ├── server.ts   # MCP server configuration
-│   └── stdio.ts    # STDIO transport implementation
-├── package.json    # Project dependencies and scripts
-└── tsconfig.json   # TypeScript configuration
+```bash
+npm run start
 ```
 
-## Technical Details
+This runs the server in stdio mode for command-line integrations.
 
-- Built with TypeScript and the `@modelcontextprotocol/sdk` (v1.7.0+)
-- Uses Zod for type validation in tools
-- HTTP server implemented with Express.js
-- Supports Server-Sent Events (SSE) for real-time communication
+## Testing the Server
 
-## Using the Server
+### Testing with cURL
 
-You can connect to this server using any MCP client, such as Claude Desktop, or build your own client.
+1. Start the HTTP server:
+   ```bash
+   npm run start:http
+   ```
 
-### Claude Desktop Configuration
+2. In a terminal window, connect to the SSE endpoint:
+   ```bash
+   curl -N http://localhost:3000/sse
+   ```
+   You should see a response like:
+   ```
+   event: endpoint
+   data: /messages?sessionId=YOUR_SESSION_ID
+   ```
 
-To use this server with Claude Desktop, add the following to your `claude_desktop_config.json` file:
+3. In another terminal window, send a request to invoke the echo tool:
+   ```bash
+   curl -X POST \
+     "http://localhost:3000/messages?sessionId=YOUR_SESSION_ID" \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 1,
+       "method": "tools/invoke",
+       "params": {
+         "name": "echo",
+         "parameters": {
+           "message": "Testing the MCP server!"
+         }
+       }
+     }'
+   ```
 
-```json
-{
-  "mcpServers": {
-    "hello-world": {
-      "command": "node",
-      "args": ["<path-to-repo>/build/stdio.js"]
-    }
-  }
-}
-```
+4. You should see a response in the SSE terminal window:
+   ```
+   event: message
+   data: {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"Hello Testing the MCP server!"}]}}
+   ```
 
-### HTTP/SSE Client Integration
+5. Try the debug tool to see available server methods:
+   ```bash
+   curl -X POST \
+     "http://localhost:3000/messages?sessionId=YOUR_SESSION_ID" \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 2,
+       "method": "tools/invoke",
+       "params": {
+         "name": "debug",
+         "parameters": {}
+       }
+     }'
+   ```
 
-When running in HTTP mode:
+### Testing with MCP Inspector
 
-1. Connect to the SSE endpoint at `/sse` to establish a connection
-2. Send messages to the `/messages` endpoint via POST requests
-3. Receive responses through the SSE connection
+For a visual interface, you can use the MCP Inspector tool:
 
-Replace `<path-to-repo>` with the absolute path to this repository.
+1. Connect to http://localhost:3000/sse in the MCP Inspector
+2. Browse available resources and tools
+3. Invoke tools interactively
+
+![MCP Inspector HTTP Mode](https://github.com/user/repo/raw/main/screenshots/mcp-inspector-http.png)
+
+![MCP Inspector STDIO Mode](https://github.com/user/repo/raw/main/screenshots/mcp-inspector-stdio.png)
+
+## Server API
+
+### Resources
+
+- `hello://world` - A static hello world resource
+- `greeting://{name}` - A dynamic greeting with a name parameter
+
+### Tools
+
+- `echo` - Echoes back a message with "Hello" prefix
+- `debug` - Lists all available tools and methods
+
+### Prompts
+
+- `helpful-assistant` - A basic helpful assistant prompt
+
+## Troubleshooting
+
+- If you get "Headers already sent" errors, make sure you're not manually setting headers
+- Session ID handling is crucial for proper message routing
+- Check the server console for debugging information
+
+## License
+
+MIT

@@ -13,6 +13,8 @@ export function createServer() {
   const server = new McpServer({
     name: "hello-world",
     version: "1.0.0",
+    // Debug handler for incoming method calls
+    debug: true,
   });
 
   // Add a static resource
@@ -71,6 +73,23 @@ export function createServer() {
     })
   );
 
+  // Add a debug tool to list available tools
+  server.tool(
+    "debug",
+    "Lists all available tools and methods",
+    {},
+    async () => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            tools: Object.keys(server),
+            methods: ["tools/invoke", "mcp/capabilities", "debug/info"]
+          }, null, 2),
+        },
+      ],
+    })
+  );
 
   return server;
 }
