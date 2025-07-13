@@ -44,11 +44,11 @@ export function createServer() {
   // Add a prompt
   server.prompt(
     "helpful-assistant",
-    "A helpful assistant prompt", // Add description as second parameter
+    "A helpful assistant prompt",
     () => ({
       messages: [
         {
-          role: "assistant", 
+          role: "assistant",
           content: {
             type: "text",
             text: "You are a helpful assistant.",
@@ -63,11 +63,11 @@ export function createServer() {
     "echo",
     "Echoes back a message with 'Hello' prefix",
     { message: z.string().describe("The message to echo") },
-    async ({ message }) => ({
+    async (params) => ({
       content: [
         {
           type: "text",
-          text: `Hello ${message}`,
+          text: `Hello ${params.message}`,
         },
       ],
     })
