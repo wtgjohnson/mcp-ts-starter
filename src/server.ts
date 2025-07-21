@@ -45,17 +45,25 @@ export function createServer() {
   server.prompt(
     "helpful-assistant",
     "A helpful assistant prompt",
-    () => ({
-      messages: [
-        {
-          role: "assistant",
-          content: {
-            type: "text",
-            text: "You are a helpful assistant.",
+    (input) => {
+      // If the client provides a prompt, respond to it
+      const userMessage = input?.messages?.find(m => m.role === "user")?.content?.text;
+      let responseText = "You are a helpful assistant.";
+      if (userMessage) {
+        responseText = `You said: "${userMessage}". How can I help you further?`;
+      }
+      return {
+        messages: [
+          {
+            role: "assistant",
+            content: {
+              type: "text",
+              text: responseText,
+            },
           },
-        },
-      ],
-    })
+        ],
+      };
+    }
   );
 
   // Add an echo tool

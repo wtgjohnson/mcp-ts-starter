@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MCP HTTP/SSE Test Client</title>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    #log { background: #f4f4f4; padding: 1em; height: 300px; overflow-y: auto; border: 1px solid #ccc; }
+    button { margin: 0.5em 0.5em 0.5em 0; }
+    input, select { margin: 0.5em 0; }
+  </style>
+</head>
+<body>
+  <h1>MCP HTTP/SSE Test Client</h1>
+  <div>
+    <label>Server URL: <input id="serverUrl" value="http://localhost:3000" size="30"></label>
+    <label>Session ID: <input id="sessionId" value="mcp-webtest"></label>
+    <button id="connectBtn">Connect to SSE</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+  </div>
+  <div>
+    <button onclick="sendInitialize()">Initialize</button>
+    <button onclick="sendListResources()">List Resources</button>
+    <button onclick="sendGetStaticResource()">Get Static Resource</button>
+    <button onclick="sendGetDynamicResource()">Get Dynamic Resource</button>
+    <button onclick="sendListTools()">List Tools</button>
+    <button onclick="sendEchoTool()">Use Echo Tool</button>
+    <button onclick="sendDebugTool()">Use Debug Tool</button>
+    <button onclick="sendListPrompts()">List Prompts</button>
+    <button onclick="sendGetPrompt()">Get Prompt</button>
+    <br><br>
+    <label>Prompt to Assistant: <input id="promptInput" type="text" size="40" placeholder="Ask the assistant anything..."></label>
+    <button onclick="sendPrompt()">Send Prompt</button>
+    function sendPrompt() {
+      const prompt = document.getElementById('promptInput').value;
+      if (!prompt) {
+        log('❌ Please enter a prompt.');
+        return;
+      }
+      sendMessage('prompts/get', {
+        name: "helpful-assistant",
+        messages: [
+          {
+            role: "user",
+            content: { type: "text", text: prompt }
+          }
+        ]
+      });
+    }
+  </div>
+  <pre id="log"></pre>
+  <script>
+    let eventSource = null;
+    let messageId = 1;
+    function log(msg) {
+      const logEl = document.getElementById('log');
+      logEl.textContent += msg + '\n';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    // Helper to pretty-print assistant prompt responses
+    function tryShowAssistantResponse(data) {
+      try {
+        const obj = typeof data === 'string' ? JSON.parse(data) : data;
+        // Check for result.messages (MCP prompt response)
+        if (obj && obj.result && Array.isArray(obj.result.messages)) {
+          obj.result.messages.forEach(msg => {
+            if (msg.role === 'assistant' && msg.content && msg.content.text) {
+              log('🤖 Assistant: ' + msg.content.text);
+            }
+          });
+        }
+        // Also check for result.content (tool responses)
+        if (obj && obj.result && Array.isArray(obj.result.content)) {
+          obj.result.content.forEach(msg => {
+            if (msg.type === 'text' && msg.text) {
+              log('🛠️ Tool: ' + msg.text);
+            }
+          });
+        }
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+    }
+    function connectSSE() {
+      const url = document.getElementById('serverUrl').value;
+      const sessionId = document.getElementById('sessionId').value;
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource(`${url}/sse?sessionId=${encodeURIComponent(sessionId)}`);
+      eventSource.onopen = () => {
+        log('🟢 SSE connected');
+        document.getElementById('connectBtn').disabled = true;
+        document.getElementById('disconnectBtn').disabled = false;
+      };
+      eventSource.onmessage = (e) => {
+        log('📥 SSE: ' + e.data);
+        tryShowAssistantResponse(e.data);
+      };
+      eventSource.onerror = (e) => {
+        log('🔴 SSE error');
+        eventSource.close();
+        document.getElementById('connectBtn').disabled = false;
+        document.getElementById('disconnectBtn').disabled = true;
+      };
+    }
+    function disconnectSSE() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+        log('🔌 SSE disconnected');
+        document.getElementById('connectBtn').disabled = false;
+        document.getElementById('disconnectBtn').disabled = true;
+      }
+    }
+    document.getElementById('connectBtn').onclick = connectSSE;
+    document.getElementById('disconnectBtn').onclick = disconnectSSE;
+    async function sendMessage(method, params = {}) {
+      const url = document.getElementById('serverUrl').value;
+      const sessionId = document.getElementById('sessionId').value;
+      const msg = {
+        jsonrpc: "2.0",
+        id: messageId++,
+        method,
+        params
+      };
+      log('📤 Sending: ' + JSON.stringify(msg));
+      const res = await fetch(`${url}/messages?sessionId=${encodeURIComponent(sessionId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(msg)
+      });
+      const text = await res.text();
+      log('📥 HTTP: ' + text);
+      tryShowAssistantResponse(text);
+    }
+    // Test actions
+    function sendInitialize() {
+      sendMessage('initialize', {
+        protocolVersion: "1.0.0",
+        capabilities: { tools: {}, resources: {}, prompts: {} },
+        clientInfo: { name: "web-client", version: "1.0.0" }
+      });
+    }
+    function sendListResources() { sendMessage('resources/list'); }
+    function sendGetStaticResource() { sendMessage('resources/read', { uri: "hello://world" }); }
+    function sendGetDynamicResource() { sendMessage('resources/read', { uri: "greeting://Alice" }); }
+    function sendListTools() { sendMessage('tools/list'); }
+    function sendEchoTool() { sendMessage('tools/call', { name: "echo", arguments: { message: "MCP Testing!" } }); }
+    function sendDebugTool() { sendMessage('tools/call', { name: "debug", arguments: {} }); }
+    function sendListPrompts() { sendMessage('prompts/list'); }
+    function sendGetPrompt() { sendMessage('prompts/get', { name: "helpful-assistant" }); }
+  </script>
+</body>
+</html>
