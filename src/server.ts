@@ -60,7 +60,7 @@ export function createServer() {
               type: "text",
               text: responseText,
             },
-          },
+           },
         ],
       };
     }

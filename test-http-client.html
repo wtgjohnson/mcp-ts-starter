@@ -31,6 +31,9 @@
     <br><br>
     <label>Prompt to Assistant: <input id="promptInput" type="text" size="40" placeholder="Ask the assistant anything..."></label>
     <button onclick="sendPrompt()">Send Prompt</button>
+  </div>
+  <pre id="log"></pre>
+  <script>
     function sendPrompt() {
       const prompt = document.getElementById('promptInput').value;
       if (!prompt) {
@@ -47,9 +50,6 @@
         ]
       });
     }
-  </div>
-  <pre id="log"></pre>
-  <script>
     let eventSource = null;
     let messageId = 1;
     function log(msg) {
